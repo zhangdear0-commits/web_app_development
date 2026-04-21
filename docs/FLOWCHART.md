@@ -1,79 +1,104 @@
-# 流程圖設計文件：食譜管理系統
+# 活動報名系統 流程圖 (Flowcharts)
 
-本文件根據產品需求文件 (PRD) 與系統架構文件，視覺化使用者在食譜管理系統中的操作流程、系統背後的處理步驟，以及功能與路由的對照表。
+本文件基於 PRD 與 ARCHITECTURE 設計，將系統的操作路徑與資料流視覺化。包含使用者流程圖、註冊報名流程的系統序列圖，以及系統功能對應的 URL 路徑清單。
 
-## 1. 使用者流程圖（User Flow）
+## 1. 使用者流程圖 (User Flow)
 
-以下流程圖說明當使用者開啟網頁後，可以執行的各項功能及頁面轉換路徑：
+展示「活動主辦者」與「一般參加者」在系統中的主要操作路線。
 
+### 1-1. 一般參加者流程
 ```mermaid
 flowchart LR
-    A([使用者開啟網站]) --> B[首頁 - 食譜列表]
+    A([進入網站首頁]) --> B[瀏覽活動列表]
+    B --> C[點擊進入活動詳情]
+    C --> D{點擊前往報名}
     
-    B --> C{選擇欲執行的功能}
+    D -->|尚未登入| E[註冊 / 登入]
+    E --> F[填寫動態報名表單]
+    D -->|已登入| F
     
-    %% 新增食譜路線
-    C -->|點擊「新增食譜」| D[填寫新增表單頁面]
-    D -->|送出表單| B
+    F --> G{報名名額判斷}
+    G -->|額滿| H[自動轉入候補名單]
+    H --> I[當有人取消，收到遞補通知]
+    I --> F
     
-    %% 搜尋/篩選路線
-    C -->|輸入「關鍵字 / 食材」| E[呈現篩選後的列表]
-    E --> C
+    G -->|有餘裕| J[報名成功，產生 QR Code 票券]
+    J --> K[發送 Email 通知]
     
-    %% 查看與編輯/刪除路線
-    C -->|點擊某個「食譜項目」| F[食譜明細頁面]
-    F --> G{在明細頁中選擇操作}
-    
-    G -->|返回| B
-    G -->|點擊「編輯食譜」| H[填寫編輯表單頁面]
-    H -->|送出表單| F
-    G -->|點擊「刪除食譜」| I[確認並刪除]
-    I -->|刪除成功| B
+    K --> L[活動當天出示 QR Code 簽到]
 ```
 
-## 2. 系統序列圖（Sequence Diagram）
+### 1-2. 活動主辦者流程
+```mermaid
+flowchart LR
+    A([登入主辦者後台]) --> B[後台管理 Dashboard]
+    B --> C{選擇管理操作}
+    
+    C -->|建立新活動| D[填寫活動資訊 & 設定動態表單]
+    D --> E[發布活動，開放報名]
+    
+    C -->|管理現有活動| F[查看名單與候補狀態]
+    F --> G[編輯表單或處理取消報名]
+    
+    C -->|分析報名狀況| H[查看圖表趨勢與分析]
+    H --> I[匯出 Excel 名單]
+    
+    C -->|現場簽到作業| J[打開手機鏡頭掃描 QR Code]
+    J --> K[自動更新參加者為「已報到」]
+```
 
-以下序列圖以核心功能**「新增食譜」**為例，展示從使用者介面送出資料到成功寫入資料庫並重導向的完整過程：
+---
+
+## 2. 系統序列圖 (Sequence Diagram)
+
+此序列圖展示一般參加者「送出報名表單」到「產生票券」之間，系統前後端的資料流運作過程。其中包含了高併發情況下的簡單鎖定機制確保名額不超賣。
 
 ```mermaid
 sequenceDiagram
-    actor User as 使用者
-    participant Browser as 瀏覽器 (模板渲染)
-    participant Flask Route as 路由 (Controller)
-    participant Model as 邏輯模型 (Model)
-    participant DB as SQLite 資料庫
+    actor User as 一般參加者
+    participant Browser as 瀏覽器 (Frontend)
+    participant Flask as Flask Route (Controller)
+    participant DB as SQLite (Models)
+    participant Email as Email 發布模組
 
-    User->>Browser: 在表單頁面填妥食譜資訊並點擊送出
-    Browser->>Flask Route: 發送 POST /recipes 請求 (攜帶表單資料)
+    User->>Browser: 填寫資料並點擊「送出報名」
+    Browser->>Flask: POST /event/<id>/register (攜帶表單資料)
     
-    Note over Flask Route, DB: 開始處理新增邏輯
+    Flask->>Flask: 資料格式驗證防呆
+    Flask->>DB: 開啟資料庫交易 (Transaction)
+    DB-->>Flask: Lock Event Row (避免同時超賣)
     
-    Flask Route->>Model: 呼叫 Recipe.create(data) 傳入解析後的資料
-    Model->>DB: 執行 SQL INSERT INTO recipes ... 
-    DB-->>Model: 回傳寫入成功訊息
-    Model-->>Flask Route: 回傳新建立的 Recipe 物件
-    
-    Note over Flask Route, Browser: 處理畫面重導向
-    
-    Flask Route-->>Browser: 回傳 302 Redirect 至首頁 (食譜列表)
-    Browser->>Flask Route: 發送 GET / 請求
-    Flask Route->>Model: 取得最新所有食譜列表
-    Model->>DB: 執行 SELECT * FROM recipes
-    DB-->>Model: 回傳新列資料
-    Model-->>Flask Route: 列表資料
-    Flask Route-->>Browser: 使用最新資料重新渲染 index.html (首頁)
+    Flask->>DB: 檢查 Event 剩餘名額
+    alt 尚有名額
+        Flask->>DB: INSERT INTO Registrations (狀態: 成功)
+        Flask->>DB: UPDATE Event (減少 1 名額)
+        DB-->>Flask: 交易 Commit 成功
+        Flask->>Flask: 呼叫 QR Gen 產生票券圖片
+        Flask->>Email: 背景觸發系統發送 "報名成功" 信件
+        Flask-->>Browser: HTTP 302 重導向到報名成功頁
+        Browser-->>User: 顯示報名成功 & QRCode
+    else 名額已滿
+        Flask->>DB: INSERT INTO Registrations (狀態: 候補)
+        DB-->>Flask: 交易 Commit 成功
+        Flask-->>Browser: HTTP 302 重導向到候補成功頁
+        Browser-->>User: 顯示目前候補順位
+    end
 ```
+
+---
 
 ## 3. 功能清單對照表
 
-對應上述流程與 PRD 需求，以下為系統功能對應的 URL 路徑與 HTTP 方法整理，提供後續 API/路由設計的參考：
+列出系統主要功能及其對應的 URL 路徑與 HTTP 操作方法（路由規劃）。
 
-| 功能項目說明 | HTTP 方法 | 預計對應的 URL 路徑 | View (Jinja2) | 備註 |
-| --- | :---: | --- | --- | --- |
-| **首頁 / 所有食譜總覽** | `GET` | `/` 或 `/recipes` | `index.html` | 可結合查詢參數 `?q=關鍵字` 處理搜尋與食材推薦功能。 |
-| **進入新增食譜表單頁** | `GET` | `/recipes/new` | `form.html` | 呈現空白的輸入表單。 |
-| **提交新增食譜資料** | `POST` | `/recipes` | *(處理無畫面)* | 處理完後 302 重導向回首頁。 |
-| **查看單一食譜明細** | `GET` | `/recipes/<id>` | `show.html` | 顯示特定 ID 的食譜完整步驟與內容。 |
-| **進入編輯食譜表單頁** | `GET` | `/recipes/<id>/edit` | `form.html` | 呈現帶有原始資料的編輯表單。 |
-| **提交更新的食譜資料** | `POST` | `/recipes/<id>/update` | *(處理無畫面)* | 使用 HTML form 故用 POST，更新完成後重導回明細頁。 |
-| **確定刪除食譜** | `POST` | `/recipes/<id>/delete` | *(處理無畫面)* | 使用 form 觸發 POST，刪除完成後重導回首頁。 |
+| 功能描述 | HTTP 方法 | URL 路徑 (Endpoint) | 負責元件 / 對應的操作 |
+| --- | --- | --- | --- |
+| 瀏覽首頁活動列表 | `GET` | `/` | 顯示所有開放中活動 |
+| 註冊會員 | `GET` / `POST`| `/auth/register` | 會員註冊頁面 / 送出註冊資料 |
+| 會員登入 | `GET` / `POST`| `/auth/login` | 會員登入頁面 / 送出登入驗證 |
+| 建立新活動 (主辦方) | `GET` / `POST`| `/events/create` | 新增活動表單頁 / 寫入新活動 |
+| 檢視活動詳情 | `GET` | `/events/<event_id>` | 取得該活動的詳細資訊介紹 |
+| 報名活動 (參加方) | `GET` / `POST`| `/events/<event_id>/register` | 選填動態欄位表單 / 送出報名或候補 |
+| 活動管理儀表板 | `GET` | `/dashboard/<event_id>` | 分頁呈現名單總覽與視覺化圖表 |
+| 匯出報名名單 | `GET` | `/events/<event_id>/export` | 使用者下載 Excel 格式檔案 |
+| QR Code 現場簽到 | `POST` | `/events/<event_id>/check-in` | 掃描後送出請求更改用戶為「已簽到」 |
