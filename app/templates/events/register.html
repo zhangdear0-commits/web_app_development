@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm mt-4 mb-5">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">填寫表單：{{ event['title'] }}</h4>
+            </div>
+            <div class="card-body p-4">
+                <div class="alert alert-info py-2 mb-4">
+                    <strong>活動資訊：</strong> 名額 {{ event['capacity'] }} 人 | {{ event['start_time'][:10] }} | {{ event['location'] }}
+                </div>
+                
+                <form action="{{ url_for('event.register_event', event_id=event['id']) }}" method="POST">
+                    
+                    <h5>參加者基本資料 (來自會員中心)</h5>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">姓名</label>
+                        <input type="text" class="form-control" value="{{ session['name'] }}" disabled>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <h5>動態問卷回覆</h5>
+                    <!-- 未來可透過 custom_form_schema 搭配 JS 自動渲染這區塊的 input，目前僅以單一欄位打平示範 -->
+                    <div class="mb-4">
+                        <label for="custom_form_data" class="form-label">請填寫額外備註 (例如: 飲食習慣或建議)</label>
+                        <textarea class="form-control" id="custom_form_data" name="custom_form_data" rows="3" placeholder='{"diet": "素食"}'></textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-5">
+                        <a href="{{ url_for('event.event_detail', event_id=event['id']) }}" class="btn btn-outline-secondary">放棄報名</a>
+                        <button type="submit" class="btn btn-success px-4">確認送出報名</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

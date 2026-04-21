@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm mt-4">
+            <div class="card-body p-4">
+                <h3 class="card-title text-center mb-4">會員註冊</h3>
+                <form action="{{ url_for('auth.register') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email (登入帳號) <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密碼 <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="name" class="form-label">您的姓名 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">聯絡電話</label>
+                        <input type="tel" class="form-control" id="phone" name="phone">
+                    </div>
+                    <div class="mb-4">
+                        <label for="role" class="form-label">註冊身分</label>
+                        <select class="form-select" id="role" name="role">
+                            <option value="participant">一般參加者</option>
+                            <option value="organizer">活動主辦方</option>
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">送出註冊</button>
+                    </div>
+                </form>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('auth.login') }}" class="text-decoration-none">已經有帳號了嗎？前往登入</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,4 +1,5 @@
-from flask import Blueprint
+from flask import Blueprint, render_template
+from app.models.event import Event
 
 main_bp = Blueprint('main', __name__)
 
@@ -9,4 +10,5 @@ def index():
     取得並顯示所有開放中活動 (呼叫 Event.get_all)
     輸出: 渲染 home.html
     """
-    pass
+    events = Event.get_all()
+    return render_template('home.html', events=events)

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-4">📊 {{ event['title'] }} - 管理儀表板</h2>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">總報名人數</h5>
+                <!-- 現行名單中不管是不是 waitlist 都先加總，實際可進階過濾 -->
+                <p class="card-text display-4">{{ registrations|length }}</p>
+                <small>（名額上限 {{ event['capacity'] }} 人）</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">已簽到人數</h5>
+                <p class="card-text display-4">
+                    {{ registrations | selectattr('status', 'equalto', 'checked_in') | list | length }}
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-light mb-3 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title text-dark">操作工具</h5>
+                <a href="{{ url_for('event.export_registrations', event_id=event['id']) }}" class="btn btn-outline-success mt-2 mb-2 w-100">📥 匯出 Excel 清單</a>
+                <button type="button" class="btn btn-outline-dark w-100 disabled">📱 開啟現場掃票模式 (API Only)</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">詳細報名名單</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>報名編號</th>
+                        <th>User ID</th>
+                        <th>狀態</th>
+                        <th>報名時間</th>
+                        <th>備註內容 (JSON)</th>
+                        <th>QR Token</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in registrations %}
+                    <tr>
+                        <td>#{{ reg['id'] }}</td>
+                        <td>{{ reg['user_id'] }}</td>
+                        <td>
+                            {% if reg['status'] == 'success' %}
+                                <span class="badge bg-primary">正取</span>
+                            {% elif reg['status'] == 'waitlist' %}
+                                <span class="badge bg-warning text-dark">候補</span>
+                            {% elif reg['status'] == 'checked_in' %}
+                                <span class="badge bg-success">已簽到</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ reg['status'] }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ reg['created_at'][:16] }}</td>
+                        <td><small class="text-muted">{{ reg['custom_form_data'] }}</small></td>
+                        <td><small>{{ reg['qr_code_token'][:8] }}...</small></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">尚未有任何人報名</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
