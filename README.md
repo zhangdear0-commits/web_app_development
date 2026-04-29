@@ -28,6 +28,7 @@
 ## 系統截圖
 請在此貼上系統的截圖畫面, 選擇一個功能邊操作邊截圖
 <img width="1470" height="956" alt="截圖 2026-04-29 晚上11 32 46" src="https://github.com/user-attachments/assets/4254896d-276b-4721-9d52-bf6028e54b74" />
+<img width="1470" height="956" alt="截圖 2026-04-29 晚上11 32 54" src="https://github.com/user-attachments/assets/893aa15d-e340-456a-bf9d-f50eba914362" />
 
 ---
 
